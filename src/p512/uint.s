@@ -1,13 +1,17 @@
-
 .intel_syntax noprefix
 
+#ifndef __APPLE__
 .section .rodata
+#endif
 
 .global uint_1
 uint_1: .quad 1, 0, 0, 0, 0, 0, 0, 0
 
-
+#ifdef __APPLE__
+.text
+#else
 .section .text
+#endif
 
 .global uint_set
 uint_set:

@@ -1,7 +1,10 @@
-
 .intel_syntax noprefix
 
+#ifdef __APPLE__
+.text
+#else
 .section .text
+#endif
 
 .fp_copy:
     cld

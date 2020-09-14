@@ -1,4 +1,3 @@
-
 BITS?=512
 
 ifndef UINT_IMPL
@@ -14,8 +13,6 @@ ifndef FP_IMPL
 		FP_IMPL="$(wildcard p${BITS}/fp.*)"
 	endif
 endif
-
-
 
 all:
 	@cc \
@@ -71,7 +68,7 @@ testcsifish: csidh.c mont.c classgroup.c reduce.c reduce.h test.c csidh.h mont.h
 		merkletree.c \
 		reduce.c \
 		classgroup.c \
-		-o testcsifish -lm -g -lgmp -lcrypto -lkeccak
+		-o testcsifish -lm -lgmp -lcrypto -lkeccak
 
 bench: csidh.c bench.c mont.c classgroup.c reduce.c reduce.h keccaklib
 	@cc \
@@ -94,7 +91,7 @@ bench: csidh.c bench.c mont.c classgroup.c reduce.c reduce.h keccaklib
 		parameters.h \
 		reduce.c \
 		classgroup.c \
-		-o bench -lm -g -lgmp -lcrypto -lkeccak
+		-o bench -lm -lgmp -lcrypto -lkeccak
 
 disttest: disttest.c classgroup.c classgroup.h reduce.c reduce.h keccaklib csidh.c csidh.h
 	@cc \
@@ -113,7 +110,7 @@ disttest: disttest.c classgroup.c classgroup.h reduce.c reduce.h keccaklib csidh
 		mont.c \
 		reduce.c \
 		classgroup.c \
-		-o disttest -lm -g -lgmp -lcrypto -lkeccak
+		-o disttest -lm -lgmp -lcrypto -lkeccak
 
 keccaklib: 
 	(cd XKCP; make generic64/libkeccak.a)

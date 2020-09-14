@@ -1,6 +1,4 @@
-
 #include <params.h>
-
 
 const uint64_t pbits = 511;
 
