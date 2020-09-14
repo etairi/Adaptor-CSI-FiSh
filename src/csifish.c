@@ -1,13 +1,14 @@
+#include <omp.h>
 #include "csifish.h"
 
-void print_uint(uint x){
-	for(int i=0 ; i<LIMBS; i++){
+void print_uint(uint x) {
+	for(int i = 0 ; i < LIMBS; i++) {
 		printf("%lu ", x.c[i] );
 	}
 	printf("\n");
 }
 
-void csifish_keygen(unsigned char *pk, unsigned char *sk){
+void csifish_keygen(unsigned char *pk, unsigned char *sk) {
 	// pick random root seed
 	RAND_bytes(sk, SEED_BYTES);
 
@@ -30,8 +31,10 @@ void csifish_keygen(unsigned char *pk, unsigned char *sk){
 		uint* curves = (uint*) PK_CURVES(pk);
 	#endif
 
-	for (int i = 0; i < PKS; ++i)
-	{
+	#ifdef PARALLELIZE
+	#pragma omp parallel for
+	#endif
+	for (int i = 0; i < PKS; ++i) {
 		private_key vec;
 		sample_from_classgroup_with_seed(seeds + i*SEED_BYTES,vec.e);
 
@@ -57,12 +60,12 @@ void csifish_keygen(unsigned char *pk, unsigned char *sk){
 	#endif
 }
 
-void get_challenges(const unsigned char *hash, uint32_t *challenges_index, uint8_t *challenges_sign){
+void get_challenges(const unsigned char *hash, uint32_t *challenges_index, uint8_t *challenges_sign) {
 	unsigned char tmp_hash[SEED_BYTES];
 	memcpy(tmp_hash,hash,SEED_BYTES);
 
 	// slow hash function
-	for(int i=0; i<HASHES; i++){
+	for (int i = 0; i < HASHES; i++) {
 		HASH(tmp_hash,SEED_BYTES,tmp_hash);
 	}
 
@@ -70,13 +73,13 @@ void get_challenges(const unsigned char *hash, uint32_t *challenges_index, uint8
 	EXPAND(tmp_hash,SEED_BYTES,(unsigned char *) challenges_index,sizeof(uint32_t)*ROUNDS);
 
 	// set sign bit and zero out higher order bits
-	for(int i=0; i<ROUNDS; i++){
+	for (int i = 0; i < ROUNDS; i++) {
 		challenges_sign[i] = (challenges_index[i] >> PK_TREE_DEPTH) & 1;
 		challenges_index[i] &= (((uint16_t) 1)<<PK_TREE_DEPTH)-1;
 	}
 }
 
-void csifish_sign(const unsigned char *sk,const unsigned char *m, uint64_t mlen, unsigned char *sig, uint64_t *sig_len){
+void csifish_sign(const unsigned char *sk,const unsigned char *m, uint64_t mlen, unsigned char *sig, uint64_t *sig_len) {
 	init_classgroup();
 
 	// hash the message
@@ -90,7 +93,11 @@ void csifish_sign(const unsigned char *sk,const unsigned char *m, uint64_t mlen,
 	// compute curves
 	mpz_t r[ROUNDS];
 	uint curves[ROUNDS] = {{{0}}};
-	for(int k=0 ; k<ROUNDS; k++){
+
+	#ifdef PARALLELIZE
+	#pragma omp parallel for
+	#endif
+	for(int k = 0 ; k < ROUNDS; k++) {
 		private_key priv;
 
 		// sample mod class number and convert to vector
@@ -139,7 +146,8 @@ void csifish_sign(const unsigned char *sk,const unsigned char *m, uint64_t mlen,
 	unsigned char *indices = calloc(1,PKS);
 	(void) indices;
 	mpz_t s[ROUNDS];
-	for(int i=0; i<ROUNDS; i++){
+
+	for(int i = 0; i < ROUNDS; i++) {
 		indices[challenges_index[i]] = 1;
 		mpz_init(s[i]);
 		sample_mod_cn_with_seed(sk_seeds + challenges_index[i]*SEED_BYTES ,s[i]);
@@ -266,7 +274,7 @@ int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mle
 
 #else
 
-int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mlen, const unsigned char *sig, uint64_t sig_len){
+int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mlen, const unsigned char *sig, uint64_t sig_len) {
 	init_classgroup();
 	(void)sig_len;
 
@@ -283,8 +291,12 @@ int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mle
 	fp_sub3(&minus_one, &fp_0, &fp_1);
 
 	uint  curves[ROUNDS];
-	uint* pkcurves = (uint*) PK_CURVES(pk); 
-	for(int i=0; i<ROUNDS; i++){
+	uint* pkcurves = (uint*) PK_CURVES(pk);
+
+	#ifdef PARALLELIZE
+	#pragma omp parallel for
+	#endif
+	for(int i = 0; i < ROUNDS; i++) {
 		// encode starting point
 		public_key start,end;
 		fp_enc(&(start.A), &pkcurves[challenges_index[i]]);
@@ -303,7 +315,7 @@ int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mle
 		mpz_clear(x);
 
 		// flip vector
-		for(int j=0; j<NUM_PRIMES; j++){
+		for(int j = 0; j < NUM_PRIMES; j++) {
 			path.e[j] = -path.e[j];
 		}
 
@@ -327,7 +339,7 @@ int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mle
 	HASH(in_buf,2*HASH_BYTES, master_hash);
 
 	// compare master_hash with signature_hash
-	if(memcmp(master_hash,SIG_HASH(sig),HASH_BYTES)){
+	if (memcmp(master_hash,SIG_HASH(sig),HASH_BYTES)) {
 		return -1;
 	}
 

@@ -1,7 +1,8 @@
 #ifndef PARAMETERS_H
-#define PARAMETERS_H value
+#define PARAMETERS_H
 
 //#define MERKLEIZE_PK
+//#define PARALLELIZE
 
 #include <openssl/sha.h>
 #include "libkeccak.a.headers/SimpleFIPS202.h"
@@ -22,13 +23,13 @@
 //#define ROUNDS 11
 //#define HASHES (1<<7)
 
-#define PK_TREE_DEPTH 8
-#define ROUNDS 13
-#define HASHES (1<<11)
+// #define PK_TREE_DEPTH 8
+// #define ROUNDS 13
+// #define HASHES (1<<11)
 
-//#define PK_TREE_DEPTH 6
-//#define ROUNDS 16
-//#define HASHES (1<<16)
+#define PK_TREE_DEPTH 6
+#define ROUNDS 16
+#define HASHES (1<<16)
 
 //#define PK_TREE_DEPTH 4
 //#define ROUNDS 23

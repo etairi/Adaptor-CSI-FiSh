@@ -28,10 +28,8 @@
 *.so.*
 *.dylib
 
-# Bin, build and lib directories
+# Bin directories
 bin/
-build/
-lib/
 
 # VS Code directory
 .vscode

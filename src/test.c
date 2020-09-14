@@ -1,9 +1,10 @@
+#define _POSIX_C_SOURCE 199309L
+#include <omp.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "csifish.h"
-#include "stdint.h"
 #include <time.h>
+#include "csifish.h"
 
 #define KEYS 1
 #define SIGNATURES_PER_KEY 10
@@ -24,6 +25,9 @@ uint64_t timer(void) {
 }
 
 int main(void) {
+	int nprocs = omp_get_num_procs();
+	omp_set_num_threads(nprocs);
+
 	uint64_t start_time, stop_time;
 	unsigned char *pk = aligned_alloc(64,PK_BYTES);
 	unsigned char *sk = aligned_alloc(64,SK_BYTES);
@@ -81,18 +85,18 @@ int main(void) {
 			verifyTime += 1000. * ((stop_time - start_time) / CLOCK_PRECISION);
 
 			if (ver < 0){
-				printf("Signature invalid! \n");
+				printf("Signature invalid!\n");
 			}
 		}
 	}
 
-	printf("average sig bytes: %ld\n", sig_size / KEYS / SIGNATURES_PER_KEY); 
+	printf("average sig bytes: %ld\n", (uint64_t) sig_size / KEYS / SIGNATURES_PER_KEY); 
 	printf("maximum sig bytes: %ld\n", sig_size_max); 
 	printf("minimum sig bytes: %ld\n\n", sig_size_min); 
 
-	printf("keygen cycles :       %lu \n", keygenCycles / KEYS);
-	printf("signing cycles :      %lu \n", signCycles / KEYS / SIGNATURES_PER_KEY);
-	printf("verification cycles : %lu \n\n", verifyCycles / KEYS / SIGNATURES_PER_KEY);
+	printf("keygen cycles :       %lu \n", (uint64_t) keygenCycles / KEYS);
+	printf("signing cycles :      %lu \n", (uint64_t) signCycles / KEYS / SIGNATURES_PER_KEY);
+	printf("verification cycles : %lu \n\n", (uint64_t) verifyCycles / KEYS / SIGNATURES_PER_KEY);
 
 	printf("keygen time :       %lf ms \n", keygenTime / KEYS);
 	printf("signing time :      %lf ms \n", signTime / KEYS / SIGNATURES_PER_KEY);
