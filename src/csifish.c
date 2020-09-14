@@ -1,5 +1,6 @@
 #include <omp.h>
 #include "csifish.h"
+#include "zkproof.h"
 
 void print_uint(uint x) {
 	for(int i = 0 ; i < LIMBS; i++) {
@@ -99,6 +100,7 @@ void csifish_sign(const unsigned char *sk,const unsigned char *m, uint64_t mlen,
 	#endif
 	for(int k = 0 ; k < ROUNDS; k++) {
 		private_key priv;
+		public_key x[2];
 
 		// sample mod class number and convert to vector
 		mpz_init(r[k]);
@@ -147,18 +149,18 @@ void csifish_sign(const unsigned char *sk,const unsigned char *m, uint64_t mlen,
 	(void) indices;
 	mpz_t s[ROUNDS];
 
-	for(int i = 0; i < ROUNDS; i++) {
+	for (int i = 0; i < ROUNDS; i++) {
 		indices[challenges_index[i]] = 1;
 		mpz_init(s[i]);
-		sample_mod_cn_with_seed(sk_seeds + challenges_index[i]*SEED_BYTES ,s[i]);
-		if(challenges_sign[i]){
+		sample_mod_cn_with_seed(sk_seeds + challenges_index[i]*SEED_BYTES, s[i]);
+		if (challenges_sign[i]) {
 			mpz_mul_si(s[i],s[i],-1);
 		}
-		mpz_sub(r[i],s[i],r[i]);
-		mpz_fdiv_r(r[i],r[i],cn);
+		mpz_sub(r[i], s[i], r[i]);
+		mpz_fdiv_r(r[i], r[i], cn);
 
 		// silly trick to force export to have 33 bytes
-		mpz_add(r[i],r[i],cn);
+		mpz_add(r[i], r[i], cn);
 
 		mpz_export(SIG_RESPONSES(sig) + 33*i, NULL, 1, 1, 1, 0, r[i]);
 
@@ -296,12 +298,12 @@ int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mle
 	#ifdef PARALLELIZE
 	#pragma omp parallel for
 	#endif
-	for(int i = 0; i < ROUNDS; i++) {
+	for (int i = 0; i < ROUNDS; i++) {
 		// encode starting point
 		public_key start,end;
 		fp_enc(&(start.A), &pkcurves[challenges_index[i]]);
 
-		if(challenges_sign[i]){
+		if (challenges_sign[i]) {
 			fp_mul2(&start.A,&minus_one);
 		}
 
@@ -339,7 +341,7 @@ int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mle
 	HASH(in_buf,2*HASH_BYTES, master_hash);
 
 	// compare master_hash with signature_hash
-	if (memcmp(master_hash,SIG_HASH(sig),HASH_BYTES)) {
+	if (memcmp(master_hash, SIG_HASH(sig), HASH_BYTES)) {
 		return -1;
 	}
 
