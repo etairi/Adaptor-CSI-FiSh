@@ -10,12 +10,6 @@
 #include "parameters.h"
 #include "classgroup.h"
 #include "fp.h"
-	
-#define PK_CURVES(pk) (pk)
-#define PK_BYTES sizeof(uint[PKS])
-
-#define SK_SEED(sk) (sk)
-#define SK_BYTES SEED_BYTES 
 
 #define PROOF_HASH(proof) (proof)
 #define PROOF_RESPONSES(proof) (PROOF_HASH(proof))
