@@ -12,32 +12,16 @@
 #include "parameters.h"
 #include "zkproof.h"
 
-#ifdef MERKLEIZE_PK
+#define PK_CURVES(pk) (pk)
+#define PK_BYTES sizeof(uint[PKS])
 
-	#define PK_BYTES SEED_BYTES+SEED_BYTES
+#define SK_SEED(sk) (sk)
+#define SK_BYTES SEED_BYTES
 
-	#define SK_SEED(sk) (sk)
-	#define SK_MERKLE_KEY(sk) (SK_SEED(sk) + SEED_BYTES)
-	#define SK_TREE(sk) (SK_MERKLE_KEY(sk) + SEED_BYTES)
-	#define SK_BYTES (2*SEED_BYTES + ((2*PKS-1)*SEED_BYTES))
-
-	#define SIG_CURVES(sig) (sig) 
-	#define SIG_RESPONSES(sig) (SIG_CURVES(sig) + sizeof(uint[ROUNDS]))
-	#define SIG_TREE_FILLING(sig) (SIG_RESPONSES(sig) + 33*ROUNDS)
-	#define SIG_BYTES (SIG_TREE_FILLING(0) + 10000)
-
-#else
-	
-	#define PK_CURVES(pk) (pk)
-	#define PK_BYTES sizeof(uint[PKS])
-
-	#define SK_SEED(sk) (sk)
-	#define SK_BYTES SEED_BYTES
-
-  #define PRESIG_CURVES_BYTES sizeof(uint[ROUNDS])
-	#define PRESIG_BYTES (33*ROUNDS + PROOF_BYTES*ROUNDS + PRESIG_CURVES_BYTES)
-
-#endif
+#define PRESIG_HASH(presig) (presig)
+#define PRESIG_RESPONSES(presig) (PRESIG_HASH(presig) + HASH_BYTES)
+#define PRESIG_CURVES_BYTES sizeof(uint[ROUNDS])
+#define PRESIG_BYTES (33*ROUNDS + PROOF_BYTES*ROUNDS + PRESIG_CURVES_BYTES)
 
 typedef struct {
   unsigned char *sig;

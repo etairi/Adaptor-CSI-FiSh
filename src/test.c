@@ -34,15 +34,15 @@ int main(void) {
 	unsigned char *pk = aligned_alloc(64, PK_BYTES);
 	unsigned char *sk = aligned_alloc(64, SK_BYTES);
 
-	printf("pk bytes : %ld\n", (long) PK_BYTES);
-	printf("sk bytes : %ld\n", (long) SK_BYTES);
+	printf("pk bytes    : %ld\n", (long) PK_BYTES);
+	printf("sk bytes    : %ld\n", (long) SK_BYTES);
+	printf("presig bytes: %ld\n", (long) PRESIG_BYTES);
+	printf("sig bytes   : %ld\n\n", (long) SIG_BYTES);
 
+	unsigned char sig[SIG_BYTES+1];
 	unsigned char message[1];
 	message[0] = 42;
 	
-	unsigned char sig[SIG_BYTES+1];
-	//uint64_t sig_len;
-
 	adaptor_sig_t presig;
 	adaptor_sig_new(presig);
 
@@ -67,11 +67,8 @@ int main(void) {
 	uint64_t preverify_cycles = 0;
 	uint64_t ext_cycles = 0;
 	uint64_t adapt_cycles = 0;
-	//uint64_t sig_size = 0;
-	uint64_t sig_size_max = 0;
-	uint64_t sig_size_min = 10000000;
 
-	for (int i = 0; i < KEYS; i++) {
+	for (unsigned i = 0; i < KEYS; i++) {
 		// sample y, ey, and compute proof
 		init_classgroup();
 		sample_mod_cn(mpz_y);
@@ -91,7 +88,7 @@ int main(void) {
 		keygen_cycles += stop_cycles - start_cycles;
 		keygen_time += ((stop_time - start_time) / CLOCK_PRECISION);
 
-		for (int j = 0; j < SIGNATURES_PER_KEY; j++) {
+		for (unsigned j = 0; j < SIGNATURES_PER_KEY; j++) {
 			printf("signature #%d for key %d\n", j, i);
 
 			start_time = timer();
@@ -101,11 +98,6 @@ int main(void) {
 			stop_cycles = rdtsc();
 			presign_cycles += stop_cycles - start_cycles;
 			presign_time += ((stop_time - start_time) / CLOCK_PRECISION);
-
-			// sig_size += sig_len;
-			// sig_size_max = (sig_len > sig_size_max ? sig_len : sig_size_max);
-			// sig_size_min = (sig_len > sig_size_min ? sig_size_min : sig_len);
-			// sig[sig_len] = 0;
 
 			start_time = timer();
 			start_cycles = rdtsc();
@@ -120,7 +112,6 @@ int main(void) {
 				goto cleanup;
 			}
 
-			sig[SIG_BYTES] = 0;
 			start_time = timer();
 			start_cycles = rdtsc();
 			csifish_adapt(presig, mpz_y, sig);
@@ -154,10 +145,6 @@ int main(void) {
 			mpz_clear(mpz_y_prime);
 		}
 	}
-
-	//printf("average sig bytes: %ld\n", (uint64_t) sig_size / KEYS / SIGNATURES_PER_KEY); 
-	printf("maximum sig bytes: %ld\n", sig_size_max); 
-	printf("minimum sig bytes: %ld\n\n", sig_size_min); 
 
 	printf("keygen cycles :       %lu \n", (uint64_t) keygen_cycles / KEYS);
 	printf("signing cycles :      %lu \n", (uint64_t) presign_cycles / KEYS / SIGNATURES_PER_KEY);

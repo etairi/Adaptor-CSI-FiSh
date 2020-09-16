@@ -39,6 +39,7 @@
 
 #endif
 
+void get_challenges_csifish(const unsigned char *hash, uint32_t *challenges_index, uint8_t *challenges_sign);
 void csifish_keygen(unsigned char *pk, unsigned char *sk);
 void csifish_sign(const unsigned char *sk,const unsigned char *m, uint64_t mlen, unsigned char *sig, uint64_t *sig_len);
 int csifish_verify(const unsigned char *pk, const unsigned char *m, uint64_t mlen, const unsigned char *sig, uint64_t sig_len);

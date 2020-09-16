@@ -2,13 +2,12 @@
 #include "adaptor.h"
 #include "zkproof.h"
 
-// TODO: Clear merkelize from adaptor and zkproof.
 void get_challenges_adaptor(const unsigned char *hash, uint32_t *challenges_index, uint8_t *challenges_sign) {
 	unsigned char tmp_hash[SEED_BYTES];
 	memcpy(tmp_hash, hash, SEED_BYTES);
 
 	// slow hash function
-	for (int i = 0; i < HASHES; i++) {
+	for (unsigned i = 0; i < HASHES; i++) {
 		HASH(tmp_hash, SEED_BYTES, tmp_hash);
 	}
 
@@ -16,23 +15,10 @@ void get_challenges_adaptor(const unsigned char *hash, uint32_t *challenges_inde
 	EXPAND(tmp_hash, SEED_BYTES, (unsigned char *) challenges_index, sizeof(uint32_t)*ROUNDS);
 
 	// set sign bit and zero out higher order bits
-	for (int i = 0; i < ROUNDS; i++) {
+	for (unsigned i = 0; i < ROUNDS; i++) {
 		challenges_sign[i] = (challenges_index[i] >> PK_TREE_DEPTH) & 1;
 		challenges_index[i] &= (((uint16_t) 1) << PK_TREE_DEPTH) - 1;
 	}
-}
-
-void uint_print(uint const *x)
-{
-    for (size_t i = 8*LIMBS-1; i < 8*LIMBS; --i)
-        printf("%02hhx", i[(unsigned char *) x->c]);
-}
-
-void fp_print(fp const *x)
-{
-    uint y;
-    fp_dec(&y, x);
-    uint_print(&y);
 }
 
 void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t mlen, const public_key Ey, adaptor_sig_t presig) {
@@ -54,7 +40,7 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
 	#ifdef PARALLELIZE
 	#pragma omp parallel for
 	#endif
-	for (int k = 0; k < ROUNDS; k++) {
+	for (unsigned k = 0; k < ROUNDS; k++) {
 		private_key priv;
 
 		// sample mod class number and convert to vector
@@ -75,11 +61,6 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
     csifish_zk_prover(statement, 2*L_j, r[k], presig->proofs[k]);
 	}
 
-	#ifdef MERKLEIZE_PK
-		// copy curves to signature
-		memcpy(SIG_CURVES(sig), (unsigned char *) curves, sizeof(uint[ROUNDS]));
-	#endif
-
 	// hash curves
 	unsigned char curve_hash[HASH_BYTES];
 	HASH((unsigned char *) curves, sizeof(uint[ROUNDS]), curve_hash);
@@ -90,11 +71,9 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
 	memcpy(in_buf + HASH_BYTES, curve_hash, HASH_BYTES);
 	HASH(in_buf, 2*HASH_BYTES, master_hash);
 
-	#ifndef MERKLEIZE_PK
-		// copy hash to signature
-		memcpy(presig->sig, master_hash, HASH_BYTES);
-	#endif
-
+	// copy hash to signature
+	memcpy(PRESIG_HASH(presig->sig), master_hash, HASH_BYTES);
+	
 	// get challenges
 	uint32_t challenges_index[ROUNDS];
 	uint8_t challenges_sign[ROUNDS];
@@ -123,118 +102,16 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
 		// silly trick to force export to have 33 bytes
 		mpz_add(r[i], r[i], cn);
 
-		mpz_export(presig->sig + HASH_BYTES + 33*i, NULL, 1, 1, 1, 0, r[i]);
+		mpz_export(PRESIG_RESPONSES(presig->sig) + 33*i, NULL, 1, 1, 1, 0, r[i]);
 
 		mpz_clear(s[i]);
 		mpz_clear(r[i]);
 	}
 
-	#ifdef MERKLEIZE_PK
-		// release the necessary nodes of merkle tree
-		uint16_t nodes_released;
-		release_nodes(SK_TREE(sk), SEED_BYTES, PK_TREE_DEPTH, indices, SIG_TREE_FILLING(sig) , &nodes_released);	
-	
-		// update signature length
-		(*sig_len) = (SIG_TREE_FILLING(0) + nodes_released*SEED_BYTES);
-	#endif
-
 	clear_classgroup();
 	free(indices);
 	free(sk_seeds);
 }
-
-#ifdef MERKLEIZE_PK
-
-int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t mlen, const public_key Ey, const adaptor_sig_t presig) {
-	init_classgroup();
-
-	// hash the message
-	unsigned char m_hash[HASH_BYTES];
-	HASH(m,mlen,m_hash);
-
-	// hash curves
-	uint* curves = (uint*) SIG_CURVES(sig);
-	unsigned char curve_hash[HASH_BYTES];
-	HASH((unsigned char *) curves, sizeof(uint[ROUNDS]), curve_hash);
-
-	// compute master hash
-	unsigned char in_buf[2*HASH_BYTES], master_hash[HASH_BYTES];
-	memcpy(in_buf,m_hash,HASH_BYTES);
-	memcpy(in_buf + HASH_BYTES, curve_hash, HASH_BYTES);
-	HASH(in_buf,2*HASH_BYTES, master_hash);
-
-	// get challenges
-	uint32_t challenges_index[ROUNDS];
-	uint8_t challenges_sign[ROUNDS];
-	get_challenges_adaptor(master_hash,challenges_index,challenges_sign);
-
-
-	fp minus_one;
-	fp_sub3(&minus_one, &fp_0, &fp_1);
-
-	uint *pkcurves = malloc(sizeof(uint[PKS])); 
-	unsigned char *indices = calloc(1,PKS);
-
-	#ifdef PARALLELIZE
-	#pragma omp parallel for
-	#endif
-	for (int i = 0; i < ROUNDS; i++) {
-		// encode starting point
-		public_key start,end;
-		fp_enc(&(start.A), &curves[i]);
-
-		// decode path
-		mpz_t x;
-		mpz_init(x);
-		private_key path;
-		mpz_import(x,33,1,1,1,0,SIG_RESPONSES(sig)+33*i);
-		mpz_sub(x,x,cn);
-		mod_cn_2_vec(x,path.e);
-		mpz_clear(x);
-
-		// perform action
-		action(&end,&start,&path);
-
-		if (challenges_sign[i]) {
-			fp_mul2(&end.A,&minus_one);
-		}
-
-		// decode endpoint
-		uint pkcurve;
-		fp_dec(&pkcurve,&end.A);	
-
-		// put endpoint in pkcurves, or compare to earlier found curve
-		if (indices[challenges_index[i]] == 0) {
-			pkcurves[challenges_index[i]] = pkcurve;
-		} else if (memcmp(&pkcurves[challenges_index[i]],&pkcurve,sizeof(uint))) {
-			// curve not equal to earlier found curve! reject signature
-			clear_classgroup();
-			free(indices);
-			free(pkcurves);
-			return -1;
-		}
-		indices[challenges_index[i]] = 1;
-	}
-
-	clear_classgroup();
-
-	// reconstruct root of merkle tree
-	unsigned char root[SEED_BYTES];
-	int nodes = ( sig_len - SIG_TREE_FILLING(0))/SEED_BYTES;
-	hash_up(pkcurves, indices,SIG_TREE_FILLING(sig),nodes,root,pk+SEED_BYTES);
-
-	free(indices);
-	free(pkcurves);
-
-	// compare root with pk
-	if (memcmp(root,pk,SEED_BYTES)) {
-		return -1;
-	}
-
-	return 1;
-}
-
-#else
 
 int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t mlen, const public_key Ey, const adaptor_sig_t presig) {
 	init_classgroup();
@@ -246,7 +123,7 @@ int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t 
 	// get challenges
 	uint32_t challenges_index[ROUNDS];
 	uint8_t  challenges_sign[ROUNDS];
-	get_challenges_adaptor(presig->sig, challenges_index, challenges_sign);
+	get_challenges_adaptor(PRESIG_HASH(presig->sig), challenges_index, challenges_sign);
 
 	fp minus_one;
 	fp_sub3(&minus_one, &fp_0, &fp_1);
@@ -274,13 +151,13 @@ int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t 
 		mpz_init(x);
 		private_key path;
 
-		mpz_import(x, 33, 1, 1, 1, 0, presig->sig + HASH_BYTES + 33*i);
+		mpz_import(x, 33, 1, 1, 1, 0, PRESIG_RESPONSES(presig->sig) + 33*i);
 		mpz_sub(x, x, cn);
 		mod_cn_2_vec(x, path.e);
 		mpz_clear(x);
 
 		// flip vector
-		for (int j = 0; j < NUM_PRIMES; j++) {
+		for (unsigned j = 0; j < NUM_PRIMES; j++) {
 			path.e[j] = -path.e[j];
 		}
 
@@ -307,7 +184,7 @@ int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t 
 	HASH(in_buf, 2*HASH_BYTES, master_hash);
 
 	// compare master_hash with signature_hash
-	if (memcmp(master_hash, presig->sig, HASH_BYTES) != 0) {
+	if (memcmp(master_hash, PRESIG_HASH(presig->sig), HASH_BYTES) != 0) {
 		return -1;
 	}
 	return 1;
@@ -320,7 +197,7 @@ int csifish_ext(const adaptor_sig_t presig, const unsigned char *sig, const publ
   mpz_init(r);
   mpz_init(hat_r);
 
-  mpz_import(hat_r, 33, 1, 1, 1, 0, presig->sig + HASH_BYTES);
+  mpz_import(hat_r, 33, 1, 1, 1, 0, PRESIG_RESPONSES(presig->sig));
   mpz_sub(hat_r, hat_r, cn);
   mpz_import(r, 33, 1, 1, 1, 0, sig + HASH_BYTES);
   mpz_sub(r, r, cn);
@@ -356,7 +233,7 @@ void csifish_adapt(const adaptor_sig_t presig, const mpz_t y, unsigned char *sig
   init_classgroup();
 
 	mpz_t r[ROUNDS], hat_r[ROUNDS];
-  memcpy(sig, presig->sig, HASH_BYTES);
+  memcpy(sig, PRESIG_HASH(presig->sig), HASH_BYTES);
 
 	#ifdef PARALLELIZE
 	#pragma omp parallel for
@@ -366,7 +243,7 @@ void csifish_adapt(const adaptor_sig_t presig, const mpz_t y, unsigned char *sig
 		mpz_init(r[i]);
     mpz_init(hat_r[i]);
 
-		mpz_import(hat_r[i], 33, 1, 1, 1, 0, presig->sig + HASH_BYTES + 33*i);
+		mpz_import(hat_r[i], 33, 1, 1, 1, 0, PRESIG_RESPONSES(presig->sig) + 33*i);
 		mpz_sub(hat_r[i], hat_r[i], cn);
 
     mpz_sub(r[i], hat_r[i], y);
@@ -381,11 +258,9 @@ void csifish_adapt(const adaptor_sig_t presig, const mpz_t y, unsigned char *sig
 		mpz_clear(hat_r[i]);
 	}
 
-  if (memcmp(sig, presig->sig, HASH_BYTES) != 0) {
+  if (memcmp(sig, PRESIG_HASH(presig->sig), HASH_BYTES) != 0) {
     fprintf(stderr, "Error: invalid memory block!\n");
   }
 
 	clear_classgroup();
 }
-
-#endif
