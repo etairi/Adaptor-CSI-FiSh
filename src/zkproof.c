@@ -85,6 +85,8 @@ void csifish_zk_prover(const public_key* x, const uint64_t xlen, mpz_t s, zk_pro
 }
 
 int csifish_zk_verifier(const public_key* x, const uint64_t xlen, const zk_proof_t proof) {
+	int fail = 0;
+
 	// get challenges
 	uint* proof_curves = (uint*) proof->curves;
 	uint curves[3*L_j*ZK_ROUNDS] = {{{0}}};
@@ -109,6 +111,8 @@ int csifish_zk_verifier(const public_key* x, const uint64_t xlen, const zk_proof
 	#pragma omp parallel for
 	#endif
 	for (unsigned i = 0; i < ZK_ROUNDS; i++) {
+		if (fail) continue;
+		
     // decode path
     mpz_t z;
     mpz_init(z);
@@ -140,9 +144,11 @@ int csifish_zk_verifier(const public_key* x, const uint64_t xlen, const zk_proof
 			fp_enc(&curve_i_j.A, &proof_curves[(i * L_j) + (j > 0 ? j - 1 : 0)]);
 
       if (memcmp(&end, &curve_i_j, sizeof(public_key)) != 0) {
-        return -1;
+        fail = 1;
       }
     }
 	}
+
+	if (fail) return -1;
 	return 1;
 }
