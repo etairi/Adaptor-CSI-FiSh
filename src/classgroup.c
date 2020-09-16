@@ -10,44 +10,45 @@ mpf_t IP[NUM_PRIMES],B[NUM_PRIMES*NUM_PRIMES];
 const char A[NUM_PRIMES*NUM_PRIMES];
 
 // clear classgroup variables
-void clear_classgroup(){
+void clear_classgroup() {
 	mpz_clear(cn);
 	mpz_clear(twopow258);
 
-	for(int i=0; i<NUM_PRIMES; i++){
+	for (int i = 0; i < NUM_PRIMES; i++) {
 		mpz_clear(babai_Ainv_row[i]);
 	}
 }
 
-void sample_mod_cn_with_seed(const unsigned char *seed, mpz_t a){	
+void sample_mod_cn_with_seed(const unsigned char *seed, mpz_t a) {	
 	unsigned char in_buf[SEED_BYTES+1];
-	memcpy(in_buf,seed,SEED_BYTES);
+	memcpy(in_buf, seed, SEED_BYTES);
 	in_buf[SEED_BYTES] = 0;
-  	while(1){
-  		// get random bytes
-  		unsigned char randomness[33];
-		EXPAND(in_buf,SEED_BYTES+1,randomness,33);
+
+  while(1) {
+  	// get random bytes
+		unsigned char randomness[33];
+		EXPAND(in_buf, SEED_BYTES+1, randomness, 33);
 		in_buf[SEED_BYTES]++;
 
-  		// import from randomness
-  		mpz_import(a,33,1,1,0,0,randomness);
+		// import from randomness
+		mpz_import(a, 33, 1, 1, 0, 0, randomness);
 
-  		// reduce mod 2^258
-  		mpz_tdiv_r(a, a, twopow258);
+		// reduce mod 2^258
+		mpz_tdiv_r(a, a, twopow258);
 
-  		if( mpz_cmp(cn,a) > 0){
-  			break;
-  		}
-  	}
+		if (mpz_cmp(cn, a) > 0) {
+			break;
+		}
+	}
 }
  
-void sample_mod_cn(mpz_t a){	
+void sample_mod_cn(mpz_t a) {	
 	// pick random seed
-  	unsigned char seed[SEED_BYTES];
-  	RAND_bytes(seed,SEED_BYTES);
+	unsigned char seed[SEED_BYTES];
+	RAND_bytes(seed, SEED_BYTES);
 
-  	// sample with seed
-  	sample_mod_cn_with_seed(seed,a);
+	// sample with seed
+	sample_mod_cn_with_seed(seed, a);
 }
 
 void inner_product(mpz_t *a, mpf_t *b, mpf_t out){

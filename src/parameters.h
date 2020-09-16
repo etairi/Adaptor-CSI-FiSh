@@ -3,6 +3,7 @@
 
 //#define MERKLEIZE_PK
 //#define PARALLELIZE
+#define L_j 2
 
 #include <openssl/sha.h>
 #include "libkeccak.a.headers/SimpleFIPS202.h"

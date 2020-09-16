@@ -3,13 +3,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
-#include "csidh.h"
-#include "merkletree.h"
-#include "stdint.h"
-#include "parameters.h"
 #include "classgroup.h"
+#include "csidh.h"
 #include "fp.h"
+#include "merkletree.h"
+#include "parameters.h"
 
 #ifdef MERKLEIZE_PK
 
