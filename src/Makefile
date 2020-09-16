@@ -14,39 +14,7 @@ ifndef FP_IMPL
 	endif
 endif
 
-all:
-	@cc \
-		-I ./ \
-		-I p${BITS}/ \
-		-std=c99 -pedantic \
-		-Wall -Wextra \
-		-march=native -O3 \
-		p${BITS}/constants.c \
-		rng.c \
-		${UINT_IMPL} ${FP_IMPL} \
-		mont.c \
-		classgroup.c \
-		csidh.c \
-		main.c \
-		reduce.c \
-		-o main -fopenmp -lm -lgmp -lcrypto
-
-debug:
-	cc \
-		-I ./ \
-		-I p${BITS}/ \
-		-std=c99 -pedantic \
-		-Wall -Wextra \
-		-g \
-		p${BITS}/constants.c \
-		rng.c \
-		${UINT_IMPL} ${FP_IMPL} \
-		mont.c \
-		csidh.c \
-		main.c \
-		-o main -lm -lcrypto
-
-testcsifish: csidh.c zkproof.c zkproof.h adaptor.c adaptor.h mont.c classgroup.c reduce.c reduce.h test.c csidh.h mont.h classgroup.h keccaklib merkletree.c merkletree.h
+test: csidh.c zkproof.c zkproof.h adaptor.c adaptor.h mont.c classgroup.c reduce.c reduce.h test.c csidh.h mont.h classgroup.h keccaklib merkletree.c merkletree.h
 	@cc \
 		$(if ${BENCH_ITS},-DBENCH_ITS=${BENCH_ITS}) \
 		$(if ${BENCH_VAL},-DBENCH_VAL=${BENCH_VAL}) \
@@ -70,53 +38,11 @@ testcsifish: csidh.c zkproof.c zkproof.h adaptor.c adaptor.h mont.c classgroup.c
 		merkletree.c \
 		reduce.c \
 		classgroup.c \
-		-o testcsifish -fopenmp -lm -lgmp -lcrypto -lkeccak
-
-bench: csidh.c bench.c mont.c classgroup.c reduce.c reduce.h keccaklib
-	@cc \
-		$(if ${BENCH_ITS},-DBENCH_ITS=${BENCH_ITS}) \
-		$(if ${BENCH_VAL},-DBENCH_VAL=${BENCH_VAL}) \
-		$(if ${BENCH_ACT},-DBENCH_ACT=${BENCH_ACT}) \
-		-I ./ \
-		-I p${BITS}/ \
-		-I XKCP/bin/generic64/ \
-		-L XKCP/bin/generic64/ \
-		-std=c99 -pedantic \
-		-Wall -Wextra \
-		-march=native -O3 \
-		p${BITS}/constants.c \
-		rng.c \
-		${UINT_IMPL} ${FP_IMPL} \
-		mont.c \
-		csidh.c \
-		bench.c \
-		parameters.h \
-		reduce.c \
-		classgroup.c \
-		-o bench -fopenmp -lm -lgmp -lcrypto -lkeccak
-
-disttest: disttest.c classgroup.c classgroup.h reduce.c reduce.h keccaklib csidh.c csidh.h
-	@cc \
-		-I ./ \
-		-I p${BITS}/ \
-		-I XKCP/bin/generic64/ \
-		-L XKCP/bin/generic64/ \
-		-std=c11 -pedantic \
-		-Wall -Wextra \
-		-march=native -O3 \
-		p${BITS}/constants.c \
-		rng.c \
-		${UINT_IMPL} ${FP_IMPL} \
-		disttest.c\
-		csidh.c \
-		mont.c \
-		reduce.c \
-		classgroup.c \
-		-o disttest -fopenmp -lm -lgmp -lcrypto -lkeccak
+		-o test -fopenmp -lm -lgmp -lcrypto -lkeccak
 
 keccaklib: 
 	(cd XKCP; make generic64/libkeccak.a)
 
 clean:
-	@rm -f main bench testcsifish
+	@rm -f test
 
