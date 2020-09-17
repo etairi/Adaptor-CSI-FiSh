@@ -148,7 +148,6 @@ void csifish_sign(const unsigned char *sk, const unsigned char *m, uint64_t mlen
 		if (challenges_sign[i]) {
 			mpz_mul_si(s[i], s[i], -1);
 		}
-
 		mpz_sub(r[i], s[i], r[i]);
 		mpz_fdiv_r(r[i], r[i], cn);
 

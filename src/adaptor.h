@@ -18,10 +18,31 @@
 #define SK_SEED(sk) (sk)
 #define SK_BYTES SEED_BYTES
 
+#ifdef OPTIMIZE
+
+#define PRESIG_HASH(presig) (presig)
+#define PRESIG_RESPONSES(presig) (PRESIG_HASH(presig) + HASH_BYTES)
+#define PRESIG_CURVE_BYTES sizeof(uint)
+#define PRESIG_BYTES (33*ROUNDS + PROOF_BYTES + PRESIG_CURVE_BYTES)
+
+#else
+
 #define PRESIG_HASH(presig) (presig)
 #define PRESIG_RESPONSES(presig) (PRESIG_HASH(presig) + HASH_BYTES)
 #define PRESIG_CURVES_BYTES sizeof(uint[ROUNDS])
 #define PRESIG_BYTES (33*ROUNDS + PROOF_BYTES*ROUNDS + PRESIG_CURVES_BYTES)
+
+#endif
+
+#ifdef OPTIMIZE
+
+typedef struct {
+  unsigned char *sig;
+  unsigned char *curve;
+  zk_proof_t proof;
+} adaptor_sig_st;
+
+#else
 
 typedef struct {
   unsigned char *sig;
@@ -29,7 +50,40 @@ typedef struct {
   zk_proof_t *proofs;
 } adaptor_sig_st;
 
+
+#endif
+
 typedef adaptor_sig_st *adaptor_sig_t;
+
+#ifdef OPTIMIZE
+
+#define adaptor_sig_new(presig)                               \
+  do {                                                        \
+    presig = malloc(sizeof(adaptor_sig_st));                  \
+    if (presig == NULL) {                                     \
+      fprintf(stderr, "Error: could not allocate memory.\n"); \
+      exit(1);                                                \
+    }                                                         \
+    (presig)->sig = malloc(HASH_BYTES + 33*ROUNDS);           \
+    (presig)->curve = aligned_alloc(64, PRESIG_CURVE_BYTES);  \
+    zk_proof_new((presig)->proof);                            \
+    if ((presig)->sig == NULL || (presig)->proof == NULL      \
+    ||  (presig)->curve == NULL) {                            \
+      fprintf(stderr, "Error: could not allocate memory.\n"); \
+      exit(1);                                                \
+    }                                                         \
+  } while (0)
+
+#define adaptor_sig_free(presig)                              \
+  do {                                                        \
+    free((presig)->sig);                                      \
+    free((presig)->curve);                                    \
+    zk_proof_free((presig)->proof);                           \
+    free(presig);                                             \
+    presig = NULL;                                            \
+  } while (0)
+
+#else
 
 #define adaptor_sig_new(presig)                               \
   do {                                                        \
@@ -62,6 +116,8 @@ typedef adaptor_sig_st *adaptor_sig_t;
     free(presig);                                             \
     presig = NULL;                                            \
   } while (0)
+
+#endif
 
 void get_challenges_adaptor(const unsigned char *hash, uint32_t *challenges_index, uint8_t *challenges_sign);
 void csifish_presign(const unsigned char *sk,const unsigned char *m, uint64_t mlen, const public_key Ey, adaptor_sig_t presig);

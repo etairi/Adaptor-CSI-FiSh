@@ -3,6 +3,7 @@
 
 //#define MERKLEIZE_PK
 //#define PARALLELIZE
+//#define OPTIMIZE
 #define L_j 2
 
 #include <openssl/sha.h>

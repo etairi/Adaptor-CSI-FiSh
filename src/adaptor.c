@@ -35,7 +35,12 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
 	// compute curves
 	mpz_t r[ROUNDS];
 	uint curves[ROUNDS] = {{{0}}};
+
+	#ifdef OPTIMIZE
+	uint* presig_curve = (uint*) presig->curve;
+	#else
 	uint* presig_curves = (uint*) presig->curves;
+	#endif
 
 	#ifdef PARALLELIZE
 	#pragma omp parallel for
@@ -48,6 +53,29 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
 		sample_mod_cn_with_seed(seeds + k*SEED_BYTES, r[k]);
 		mod_cn_2_vec(r[k], priv.e);
 
+		#ifdef OPTIMIZE
+		// compute group actions
+		public_key out, out_hat;
+
+		if (k == 0) {
+			action(&out_hat, &base, &priv);
+    	action(&out, &Ey, &priv);
+		} else {
+			(void) out_hat;
+			action(&out, &base, &priv);
+		}
+
+		// convert to uint64_t's
+		fp_dec(&curves[k], &out.A);
+
+		if (k == 0) {
+			fp_dec(&presig_curve[k], &out.A);
+    	public_key statement[] = { base, out_hat, Ey, out };
+    	csifish_zk_prover(statement, 2*L_j, r[k], presig->proof);
+		}
+
+		#else
+
 		// compute group actions
 		public_key out, out_hat;
 		action(&out_hat, &base, &priv);
@@ -59,6 +87,8 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
 
     public_key statement[] = { base, out_hat, Ey, out };
     csifish_zk_prover(statement, 2*L_j, r[k], presig->proofs[k]);
+
+		#endif
 	}
 
 	// hash curves
@@ -115,6 +145,7 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
 
 int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t mlen, const public_key Ey, const adaptor_sig_t presig) {
 	init_classgroup();
+	int fail = 0;
 
 	// hash the message
 	unsigned char m_hash[HASH_BYTES];
@@ -129,18 +160,32 @@ int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t 
 	fp_sub3(&minus_one, &fp_0, &fp_1);
 
 	uint  curves[ROUNDS];
-	uint* presig_curves = (uint*) presig->curves;
 	uint* pkcurves = (uint*) PK_CURVES(pk);
+
+	#ifdef OPTIMIZE
+	uint* presig_curve = (uint*) presig->curve;
+	#else
+	uint* presig_curves = (uint*) presig->curves;
+	#endif
 
 	#ifdef PARALLELIZE
 	#pragma omp parallel for
 	#endif
 	for (unsigned i = 0; i < ROUNDS; i++) {
+		if (fail) continue;
 		// encode starting point
 		public_key pk_ci, hat_Ei, Ei;
 		fp_enc(&(pk_ci.A), &pkcurves[challenges_index[i]]);
+
+		#ifdef OPTIMIZE
+		if (i == 0) {
+			fp_enc(&(Ei.A), &presig_curve[i]);
+    	memcpy(&curves[i], &presig_curve[i], sizeof(uint));
+		}
+		#else
     fp_enc(&(Ei.A), &presig_curves[i]);
     memcpy(&curves[i], &presig_curves[i], sizeof(uint));
+		#endif
 
 		if (challenges_sign[i]) {
 			fp_mul2(&pk_ci.A, &minus_one);
@@ -164,14 +209,29 @@ int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t 
 		// perform action
 		action(&hat_Ei, &pk_ci, &path);
 
+		#ifdef OPTIMIZE
+		if (i == 0) {
+			public_key statement[] = { base, hat_Ei, Ey, Ei };
+			if (csifish_zk_verifier(statement, 2*L_j, presig->proof) != 1) {
+				fprintf(stderr, "Error: ZK proof verification failed.\n");
+				fail = 1;
+			}
+		} else {
+			// decode endpoint
+			fp_dec(&curves[i], &hat_Ei.A);	
+		}
+		#else
     public_key statement[] = { base, hat_Ei, Ey, Ei };
     if (csifish_zk_verifier(statement, 2*L_j, presig->proofs[i]) != 1) {
       fprintf(stderr, "Error: ZK proof (%u) verification failed.\n", i);
-      exit(1);
+      fail = 1;
     }
+		#endif
 	}
 
 	clear_classgroup();
+
+	if (fail) return -1;
 
 	// hash curves
 	unsigned char curve_hash[HASH_BYTES];
@@ -244,13 +304,24 @@ void csifish_adapt(const adaptor_sig_t presig, const mpz_t y, unsigned char *sig
     mpz_init(hat_r[i]);
 
 		mpz_import(hat_r[i], 33, 1, 1, 1, 0, PRESIG_RESPONSES(presig->sig) + 33*i);
-		mpz_sub(hat_r[i], hat_r[i], cn);
 
+		#ifdef OPTIMIZE
+		if (i == 0) {
+			mpz_sub(hat_r[i], hat_r[i], cn);
+			mpz_sub(r[i], hat_r[i], y);
+			mpz_fdiv_r(r[i], r[i], cn);
+			// silly trick to force export to have 33 bytes
+			mpz_add(r[i], r[i], cn);
+		} else {
+			mpz_set(r[i], hat_r[i]);
+		}
+		#else
+		mpz_sub(hat_r[i], hat_r[i], cn);
     mpz_sub(r[i], hat_r[i], y);
     mpz_fdiv_r(r[i], r[i], cn);
-
 		// silly trick to force export to have 33 bytes
 		mpz_add(r[i], r[i], cn);
+		#endif
 
 		mpz_export(sig + HASH_BYTES + 33*i, NULL, 1, 1, 1, 0, r[i]);
 
