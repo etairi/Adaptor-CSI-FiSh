@@ -68,7 +68,7 @@ int main(void) {
 	uint64_t ext_cycles = 0;
 	uint64_t adapt_cycles = 0;
 
-	for (unsigned i = 0; i < KEYS; i++) {
+	for (unsigned i = 1; i <= KEYS; i++) {
 		// sample y, ey, and compute proof
 		init_classgroup();
 		sample_mod_cn(mpz_y);
@@ -88,7 +88,7 @@ int main(void) {
 		keygen_cycles += stop_cycles - start_cycles;
 		keygen_time += ((stop_time - start_time) / CLOCK_PRECISION);
 
-		for (unsigned j = 0; j < SIGNATURES_PER_KEY; j++) {
+		for (unsigned j = 1; j <= SIGNATURES_PER_KEY; j++) {
 			printf("signature #%d for key %d\n", j, i);
 
 			start_time = timer();
