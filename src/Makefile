@@ -1,5 +1,17 @@
 BITS?=512
 
+OS_NAME := $(shell uname -s | tr A-Z a-z)
+
+ifeq ($(OS_NAME),darwin)
+CC = /usr/local/opt/llvm/bin/clang
+OMPFLAG = -I/usr/local/include -I/usr/local/opt/llvm/include -fopenmp
+LDFLAG = -L/usr/local/opt/llvm/lib -L/usr/local/lib
+else
+CC = cc
+OMPFLAG = -I/usr/local/include -fopenmp
+LDFLAG = -L/usr/local/lib
+endif
+
 ifndef UINT_IMPL
 	UINT_IMPL=uint.c
 	ifneq ("$(wildcard p${BITS}/uint.s)", "")
@@ -15,7 +27,7 @@ ifndef FP_IMPL
 endif
 
 test: csidh.c zkproof.c zkproof.h adaptor.c adaptor.h mont.c classgroup.c reduce.c reduce.h test.c csidh.h mont.h classgroup.h keccaklib merkletree.c merkletree.h
-	@cc \
+	@${CC} \
 		$(if ${BENCH_ITS},-DBENCH_ITS=${BENCH_ITS}) \
 		$(if ${BENCH_VAL},-DBENCH_VAL=${BENCH_VAL}) \
 		$(if ${BENCH_ACT},-DBENCH_ACT=${BENCH_ACT}) \
@@ -24,6 +36,7 @@ test: csidh.c zkproof.c zkproof.h adaptor.c adaptor.h mont.c classgroup.c reduce
 		-I XKCP/bin/generic64/ \
 		-L XKCP/bin/generic64/ \
 		-std=c11 -pedantic \
+		${OMPFLAG} \
 		-Wall -Wextra \
 		-march=native -O3 \
 		p${BITS}/constants.c \
@@ -38,7 +51,7 @@ test: csidh.c zkproof.c zkproof.h adaptor.c adaptor.h mont.c classgroup.c reduce
 		merkletree.c \
 		reduce.c \
 		classgroup.c \
-		-o test -fopenmp -lm -lgmp -lcrypto -lkeccak
+		-o test -lm -lgmp -lcrypto -lkeccak ${LDFLAG}
 
 keccaklib: 
 	(cd XKCP; make generic64/libkeccak.a)
