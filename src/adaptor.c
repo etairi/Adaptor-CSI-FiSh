@@ -42,7 +42,7 @@ void csifish_presign(const unsigned char *sk, const unsigned char *m, uint64_t m
 	uint* presig_curves = (uint*) presig->curves;
 	#endif
 
-	#ifdef PARALLELIZE
+	#if defined(PARALLELIZE) && !defined(OPTIMIZE)
 	#pragma omp parallel for
 	#endif
 	for (unsigned k = 0; k < ROUNDS; k++) {
@@ -168,7 +168,7 @@ int csifish_preverify(const unsigned char *pk, const unsigned char *m, uint64_t 
 	uint* presig_curves = (uint*) presig->curves;
 	#endif
 
-	#ifdef PARALLELIZE
+	#if defined(PARALLELIZE) && !defined(OPTIMIZE)
 	#pragma omp parallel for
 	#endif
 	for (unsigned i = 0; i < ROUNDS; i++) {
