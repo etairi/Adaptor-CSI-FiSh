@@ -13,9 +13,9 @@
 
 static inline
 uint64_t rdtsc(void) {
-    unsigned int lo,hi;
-    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-    return ((uint64_t)hi << 32) | lo;
+	unsigned int lo,hi;
+	__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+	return ((uint64_t)hi << 32) | lo;
 }
 
 static inline 
@@ -39,6 +39,7 @@ int main(void) {
 	printf("presig bytes: %ld\n", (long) PRESIG_BYTES);
 	printf("sig bytes   : %ld\n\n", (long) SIG_BYTES);
 
+	uint64_t sig_len;
 	unsigned char sig[SIG_BYTES+1];
 	unsigned char message[1];
 	message[0] = 42;
@@ -58,13 +59,17 @@ int main(void) {
 	uint64_t start_time, stop_time;
 	uint64_t start_cycles, stop_cycles;
 	double keygen_time = 0;
+	double sign_time = 0;
 	double presign_time = 0;
 	double preverify_time = 0;
+	double verify_time = 0;
 	double ext_time = 0;
 	double adapt_time = 0;
 	uint64_t keygen_cycles = 0;
+	uint64_t sign_cycles = 0;
 	uint64_t presign_cycles = 0;
 	uint64_t preverify_cycles = 0;
+	uint64_t verify_cycles = 0;
 	uint64_t ext_cycles = 0;
 	uint64_t adapt_cycles = 0;
 
@@ -90,6 +95,14 @@ int main(void) {
 
 		for (unsigned j = 1; j <= SIGNATURES_PER_KEY; j++) {
 			printf("signature #%d for key %d\n", j, i);
+
+			start_time = timer();
+			start_cycles = rdtsc();
+			stop_time = timer();
+			csifish_sign(sk, message, 1, sig, &sig_len);
+			stop_cycles = rdtsc();
+			sign_cycles += stop_cycles - start_cycles;
+			sign_time += ((stop_time - start_time) / CLOCK_PRECISION);
 
 			start_time = timer();
 			start_cycles = rdtsc();
@@ -120,7 +133,14 @@ int main(void) {
 			adapt_cycles += stop_cycles - start_cycles;
 			adapt_time += ((stop_time - start_time) / CLOCK_PRECISION);
 
+			start_time = timer();
+			start_cycles = rdtsc();
 			int sig_ver = csifish_verify(pk, message, 1, sig, SIG_BYTES);
+			stop_time = timer();
+			stop_cycles = rdtsc();
+			verify_cycles += stop_cycles - start_cycles;
+			verify_time += ((stop_time - start_time) / CLOCK_PRECISION);
+
 			if (sig_ver < 0) {
 				fprintf(stderr, "Error: signature invalid (%d)!\n", sig_ver);
 				goto cleanup;
@@ -146,17 +166,21 @@ int main(void) {
 		}
 	}
 
-	printf("keygen cycles	: %lu \n", (uint64_t) keygen_cycles / KEYS);
+	printf("keygen cycles : %lu \n", (uint64_t) keygen_cycles / KEYS);
 	printf("pre-sig cycles: %lu \n", (uint64_t) presign_cycles / KEYS / SIGNATURES_PER_KEY);
 	printf("pre-ver cycles: %lu \n", (uint64_t) preverify_cycles / KEYS / SIGNATURES_PER_KEY);
+	printf("sig cycles    : %lu \n", (uint64_t) sign_cycles / KEYS / SIGNATURES_PER_KEY);
+	printf("ver cycles    : %lu \n", (uint64_t) verify_cycles / KEYS / SIGNATURES_PER_KEY);
 	printf("extract cycles: %lu \n", (uint64_t) ext_cycles / KEYS / SIGNATURES_PER_KEY);
-	printf("adapt cycles	: %lu \n\n", (uint64_t) adapt_cycles / KEYS / SIGNATURES_PER_KEY);
+	printf("adapt cycles  : %lu \n\n", (uint64_t) adapt_cycles / KEYS / SIGNATURES_PER_KEY);
 
 	printf("keygen time :	%.5lf sec \n", keygen_time / KEYS);
 	printf("pre-sig time:	%.5lf sec \n", presign_time / KEYS / SIGNATURES_PER_KEY);
 	printf("pre-ver time: %.5lf sec \n", preverify_time / KEYS / SIGNATURES_PER_KEY);
+	printf("sig time    :	%.5lf sec \n", sign_time / KEYS / SIGNATURES_PER_KEY);
+	printf("ver time    : %.5lf sec \n", verify_time / KEYS / SIGNATURES_PER_KEY);
 	printf("extract time: %.5lf sec \n", ext_time / KEYS / SIGNATURES_PER_KEY);
-	printf("adapt time	: %.5lf sec \n\n", adapt_time / KEYS / SIGNATURES_PER_KEY);
+	printf("adapt time  : %.5lf sec \n\n", adapt_time / KEYS / SIGNATURES_PER_KEY);
 
 	cleanup:
 	mpz_clear(mpz_y);
