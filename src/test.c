@@ -98,8 +98,8 @@ int main(void) {
 
 			start_time = timer();
 			start_cycles = rdtsc();
-			stop_time = timer();
 			csifish_sign(sk, message, 1, sig, &sig_len);
+			stop_time = timer();
 			stop_cycles = rdtsc();
 			sign_cycles += stop_cycles - start_cycles;
 			sign_time += ((stop_time - start_time) / CLOCK_PRECISION);
@@ -166,7 +166,7 @@ int main(void) {
 		}
 	}
 
-	printf("keygen cycles : %lu \n", (uint64_t) keygen_cycles / KEYS);
+	printf("\nkeygen cycles : %lu \n", (uint64_t) keygen_cycles / KEYS);
 	printf("pre-sig cycles: %lu \n", (uint64_t) presign_cycles / KEYS / SIGNATURES_PER_KEY);
 	printf("pre-ver cycles: %lu \n", (uint64_t) preverify_cycles / KEYS / SIGNATURES_PER_KEY);
 	printf("sig cycles    : %lu \n", (uint64_t) sign_cycles / KEYS / SIGNATURES_PER_KEY);
@@ -174,10 +174,10 @@ int main(void) {
 	printf("extract cycles: %lu \n", (uint64_t) ext_cycles / KEYS / SIGNATURES_PER_KEY);
 	printf("adapt cycles  : %lu \n\n", (uint64_t) adapt_cycles / KEYS / SIGNATURES_PER_KEY);
 
-	printf("keygen time :	%.5lf sec \n", keygen_time / KEYS);
-	printf("pre-sig time:	%.5lf sec \n", presign_time / KEYS / SIGNATURES_PER_KEY);
+	printf("keygen time : %.5lf sec \n", keygen_time / KEYS);
+	printf("pre-sig time: %.5lf sec \n", presign_time / KEYS / SIGNATURES_PER_KEY);
 	printf("pre-ver time: %.5lf sec \n", preverify_time / KEYS / SIGNATURES_PER_KEY);
-	printf("sig time    :	%.5lf sec \n", sign_time / KEYS / SIGNATURES_PER_KEY);
+	printf("sig time    : %.5lf sec \n", sign_time / KEYS / SIGNATURES_PER_KEY);
 	printf("ver time    : %.5lf sec \n", verify_time / KEYS / SIGNATURES_PER_KEY);
 	printf("extract time: %.5lf sec \n", ext_time / KEYS / SIGNATURES_PER_KEY);
 	printf("adapt time  : %.5lf sec \n\n", adapt_time / KEYS / SIGNATURES_PER_KEY);
