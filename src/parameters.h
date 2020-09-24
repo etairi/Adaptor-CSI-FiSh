@@ -2,8 +2,8 @@
 #define PARAMETERS_H
 
 //#define MERKLEIZE_PK
-//#define THREADS 2
-//#define PARALLELIZE
+#define THREADS 16
+#define PARALLELIZE
 #define OPTIMIZE
 #define L_j 2
 
@@ -30,9 +30,9 @@
 //#define HASHES (1<<7)
 //#define ZK_ROUNDS 121
 
-// #define PK_TREE_DEPTH 8
-// #define ROUNDS 13
-// #define HASHES (1<<11)
+//#define PK_TREE_DEPTH 8
+//#define ROUNDS 13
+//#define HASHES (1<<11)
 //#define ZK_ROUNDS 117
 
 #define PK_TREE_DEPTH 6

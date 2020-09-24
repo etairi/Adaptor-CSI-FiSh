@@ -27,8 +27,9 @@ uint64_t timer(void) {
 
 int main(void) {
 	#ifdef PARALLELIZE
-	//int nprocs = omp_get_num_procs();
-	omp_set_num_threads(THREADS);
+	int nprocs = omp_get_num_procs();
+	if (THREADS > nprocs) omp_set_num_threads(nprocs);
+	else omp_set_num_threads(THREADS);
 	#endif
 
 	unsigned char *pk = aligned_alloc(64, PK_BYTES);
