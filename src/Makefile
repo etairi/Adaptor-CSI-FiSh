@@ -39,7 +39,7 @@ test: csidh.c zkproof.c zkproof.h adaptor.c adaptor.h mont.c classgroup.c reduce
 		${OMPFLAG} \
 		-Wall -Wextra \
 		-Wno-unused-parameter \
-		-Wno-unused-varialbe \
+		-Wno-unused-variable \
 		-march=native -O3 \
 		p${BITS}/constants.c \
 		rng.c \
