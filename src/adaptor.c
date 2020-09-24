@@ -270,6 +270,7 @@ int csifish_ext(const adaptor_sig_t presig, const unsigned char *sig, const publ
   private_key y_prime;
   public_key Ey_prime;
 
+	#ifndef OPTIMIZE
   mod_cn_2_vec(y, y_prime.e);
 	action(&Ey_prime, &base, &y_prime);
   if (memcmp(&Ey, &Ey_prime, sizeof(public_key)) != 0) {
@@ -284,6 +285,7 @@ int csifish_ext(const adaptor_sig_t presig, const unsigned char *sig, const publ
     clear_classgroup();
     return -1;
   }
+	#endif
 
   return 1;
 	clear_classgroup();

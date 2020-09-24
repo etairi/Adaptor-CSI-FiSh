@@ -8,7 +8,7 @@
 #include "csifish.h"
 
 #define KEYS 1
-#define SIGNATURES_PER_KEY 5
+#define SIGNATURES_PER_KEY 10
 #define CLOCK_PRECISION 1E9
 
 static inline
@@ -27,8 +27,8 @@ uint64_t timer(void) {
 
 int main(void) {
 	#ifdef PARALLELIZE
-	int nprocs = omp_get_num_procs();
-	omp_set_num_threads(nprocs);
+	//int nprocs = omp_get_num_procs();
+	omp_set_num_threads(THREADS);
 	#endif
 
 	unsigned char *pk = aligned_alloc(64, PK_BYTES);

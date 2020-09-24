@@ -2,6 +2,7 @@
 #define PARAMETERS_H
 
 //#define MERKLEIZE_PK
+//#define THREADS 2
 //#define PARALLELIZE
 #define OPTIMIZE
 #define L_j 2
