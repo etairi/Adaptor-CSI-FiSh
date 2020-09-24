@@ -2,8 +2,13 @@
 
 This repository contains the implementation of the adaptor signature version of the isogeny-based signature scheme [CSI-FiSh](https://github.com/KULeuven-COSIC/CSI-FiSh).
 
-The implementation depends on GMP library for the Babai nearest plane step.
+## Dependencies
 
-Build with "make test"
+* [GMP](https://gmplib.org/) >= 6.1.2
 
-Run with "./test"
+## Usage
+
+```sh
+make test
+./test
+```
