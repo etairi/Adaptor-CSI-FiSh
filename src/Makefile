@@ -38,6 +38,8 @@ test: csidh.c zkproof.c zkproof.h adaptor.c adaptor.h mont.c classgroup.c reduce
 		-std=c11 -pedantic \
 		${OMPFLAG} \
 		-Wall -Wextra \
+		-Wno-unused-parameter \
+		-Wno-unused-varialbe \
 		-march=native -O3 \
 		p${BITS}/constants.c \
 		rng.c \
